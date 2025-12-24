@@ -16,7 +16,7 @@ const FREEKASSA_IPS = new Set([
 ]);
 
 // ← Вот сюда вставь свой настоящий секрет №2 !!!
-const SECRET_WORD_2 = 369258147;
+const SECRET_WORD_2 = 159263487;
 
 // Webhook от FreeKassa
 app.post("/webhook", (req, res) => {
