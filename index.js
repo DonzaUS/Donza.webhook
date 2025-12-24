@@ -79,10 +79,40 @@ app.get("/webhook", (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 
-// Страница успеха — сразу редирект на магазин
+// Страница успеха — показываем "Спасибо" 5 секунд, потом редирект
 app.get("/success", (req, res) => {
-  console.log("Успешная оплата — редирект на магазин");
-  res.redirect("https://www.donza.site/shop");
+  console.log("Успешная оплата — показываем спасибо 5 сек, редирект на магазин");
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+      <meta charset="UTF-8">
+      <meta http-equiv="refresh" content="5;url=https://www.donza.site/shop">
+      <title>Оплата прошла!</title>
+      <style>
+        body {
+          font-family: sans-serif;
+          text-align: center;
+          padding: 80px;
+          background: #f8f9fa;
+          color: #333;
+        }
+        h1 { color: #28a745; margin-bottom: 20px; }
+        p { font-size: 1.2em; margin: 20px 0; }
+        .redirect-info { 
+          font-size: 1em; 
+          color: #666; 
+          margin-top: 40px;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Спасибо! Оплата успешно прошла 🎉</h1>
+      <p> Награды будут доставлены как можно скорее </p>
+      <p class="redirect-info">Если перенаправление не сработало автоматически — <a href="https://www.donza.site/shop">нажмите сюда</a></p>
+    </body>
+    </html>
+  `);
 });
 
 // Страница неудачи
