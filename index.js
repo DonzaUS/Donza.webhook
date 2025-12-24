@@ -123,7 +123,7 @@ app.get("/failure", (req, res) => {
     <html lang="ru">
     <head>
       <meta charset="UTF-8">
-      <meta http-equiv="refresh" content="5;url=https://www.donza.site/shop">
+      <meta http-equiv="refresh" content="9;url=https://www.donza.site/shop">
       <title>Оплата не прошла</title>
       <style>
         body {
