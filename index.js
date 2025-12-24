@@ -108,6 +108,49 @@ app.get("/failure", (req, res) => {
     </html>
   `);
 });
+
+// Главная страница (корневой путь /)
+app.get("/", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Платёжный сервис</title>
+      <style>
+        body { 
+          font-family: sans-serif; 
+          text-align: center; 
+          padding: 50px; 
+          background: #f8f9fa;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { color: #333; }
+        .status { 
+          background: #e7f3ff; 
+          padding: 20px; 
+          border-radius: 8px; 
+          margin: 20px 0; 
+          border-left: 4px solid #007bff;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>🔧 Платёжный сервис</h1>
+        <div class="status">
+          <h2>Статус: <span style="color: green;">Готов к работе</span></h2>
+          <p>Webhook: <a href="/webhook" style="color: #007bff;">✓ Активен</a></p>
+          <p>Оплата: <a href="/success" style="color: #28a745;">✓ Тест успеха</a> | 
+             <a href="/failure" style="color: #dc3545;">✗ Тест отказа</a></p>
+        </div>
+        <p><small>Сервер запущен на Render. Платежи обрабатываются автоматически.</small></p>
+      </div>
+    </body>
+    </html>
+  `);
+});
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
 });
