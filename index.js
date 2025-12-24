@@ -115,16 +115,38 @@ app.get("/success", (req, res) => {
   `);
 });
 
-// Страница неудачи
+// Страница неудачи — показываем сообщение 5 секунд, потом редирект на магазин
 app.get("/failure", (req, res) => {
+  console.log("Неудачная оплата — показываем сообщение 5 сек, редирект на магазин");
   res.send(`
     <!DOCTYPE html>
     <html lang="ru">
-    <head><meta charset="UTF-8"><title>Оплата не прошла</title></head>
-    <body style="font-family:sans-serif; text-align:center; padding:50px;">
-      <h1 style="color:red;">Оплата не удалась 😔</h1>
-      <p>Возможно, ошибка карты или отмена. Попробуйте снова.</p>
-      <p><a href="/">Вернуться на главную</a></p>
+    <head>
+      <meta charset="UTF-8">
+      <meta http-equiv="refresh" content="5;url=https://www.donza.site/shop">
+      <title>Оплата не прошла</title>
+      <style>
+        body {
+          font-family: sans-serif;
+          text-align: center;
+          padding: 80px;
+          background: #f8f9fa;
+          color: #333;
+        }
+        h1 { color: #dc3545; margin-bottom: 20px; }
+        p { font-size: 1.2em; margin: 20px 0; }
+        .redirect-info { 
+          font-size: 1em; 
+          color: #666; 
+          margin-top: 40px;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Оплата не удалась 😔</h1>
+      <p>Возможно, проблема с картой, недостаточно средств или вы отменили платёж.</p>
+      <p>Сейчас вы будете перенаправлены в магазин...</p>
+      <p class="redirect-info">Если перенаправление не сработало — <a href="https://www.donza.site/shop">нажмите сюда</a></p>
     </body>
     </html>
   `);
