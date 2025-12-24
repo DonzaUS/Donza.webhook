@@ -16,7 +16,15 @@ const FREEKASSA_IPS = new Set([
 ]);
 
 // ← Вот сюда вставь свой настоящий секрет №2 !!!
-const SECRET_WORD_2 = 159263487;
+const SECRET_WORD_2 = process.env.FREEKASSA_SECRET_2; // Секретное слово 2 из env
+const API_KEY = process.env.FREEKASSA_API_KEY; // API-ключ из env
+
+if (!SECRET_WORD_2) {
+  console.error("❌ Секретное слово 2 не найдено в env! Добавь на Render.");
+}
+if (!API_KEY) {
+  console.error("❌ API-ключ не найден в env! Добавь на Render для создания заказов.");
+}
 
 // Webhook от FreeKassa
 app.post("/webhook", (req, res) => {
