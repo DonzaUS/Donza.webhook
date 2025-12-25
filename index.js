@@ -202,6 +202,65 @@ app.get("/", (req, res) => {
     </html>
   `);
 });
+
+// Импорт fetch для запросов к FreeKassa (если ещё нет)
+import fetch from 'node-fetch';
+
+// Маршрут для создания ссылки на оплату (React будет сюда слать запрос)
+app.post('/create-payment', async (req, res) => {
+  const { 
+    amount,       // сумма, например 425
+    orderId,      // уникальный ID заказа, React сам сгенерит
+    method = 44   // метод: 44 = СБП QR, 36 = карты РФ, 43 = SberPay
+  } = req.body;
+
+  if (!amount || !orderId) {
+    return res.status(400).json({ success: false, error: 'Нет суммы или ID заказа' });
+  }
+
+  const nonce = Date.now(); // уникальное число
+
+  const payload = {
+    shopId: Number(process.env.SHOP_ID), // твой ID магазина из env
+    nonce,
+    paymentId: String(orderId),
+    i: method,
+    email: 'client@telegram.org', // или реальный email клиента
+    ip: req.ip || '127.0.0.1',
+    amount: Number(amount),
+    currency: 'RUB'
+  };
+
+  // Формируем подпись (как в доках FreeKassa)
+  const sortedKeys = Object.keys(payload).sort();
+  const signString = sortedKeys.map(key => payload[key]).join('|');
+  payload.signature = crypto
+    .createHmac('sha256', process.env.FREEKASSA_API_KEY)
+    .update(signString)
+    .digest('hex');
+
+  try {
+    const response = await fetch('https://api.fk.life/v1/orders/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (data.type === 'success') {
+      console.log(`Создан заказ ${orderId}, ${amount} ₽ → ${data.location}`);
+      res.json({ success: true, link: data.location });
+    } else {
+      console.error('FreeKassa ошибка:', data);
+      res.status(500).json({ success: false, error: data.message || 'Ошибка' });
+    }
+  } catch (err) {
+    console.error('Ошибка запроса:', err);
+    res.status(500).json({ success: false, error: 'Серверная ошибка' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
 });
