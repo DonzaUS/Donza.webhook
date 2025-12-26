@@ -217,27 +217,28 @@ import fetch from 'node-fetch';
 // Маршрут для создания ссылки на оплату
 app.post('/create-payment', async (req, res) => {
   const { 
-    amount,
-    orderId,
+    amount, 
+    orderId, 
     method = 44,
-    gameId,
-    uc
+    gameId,   // ← Обязательно добавь
+    uc        // ← Для логов
   } = req.body;
 
-  // Проверка обязательных полей
+  // Проверка (теперь видит gameId)
   if (!amount || !orderId || !gameId) {
+    console.log('Ошибка: не хватает полей', { amount, orderId, gameId });
     return res.status(400).json({ success: false, error: 'Нет суммы, ID заказа или игрового ID' });
   }
 
-  // Красивый лог в Render Logs — кто и за что оплатил
+  // Лог в Render (красивый)
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║                НОВЫЙ ЗАКАЗ НА ОПЛАТУ                     ║');
   console.log('╠════════════════════════════════════════════════════════════╣');
-  console.log(`║ Игрок ID:           ${req.body.gameId || 'не указан'}${''.padEnd(35)} ║`);
-  console.log(`║ Сумма:              ${req.body.amount} ₽${''.padEnd(35)} ║`);
-  console.log(`║ UC:                 ${req.body.uc || 'не указано'}${''.padEnd(35)} ║`);
-  console.log(`║ Метод:              ${req.body.method || 'не указан'}${''.padEnd(35)} ║`);
-  console.log(`║ Order ID:           ${req.body.orderId}${''.padEnd(35)} ║`);
+  console.log(`║ Игрок ID:           ${gameId.padEnd(35)} ║`);
+  console.log(`║ Сумма:              ${amount} ₽${''.padEnd(35)} ║`);
+  console.log(`║ UC:                 ${uc || 'не указано'}${''.padEnd(35)} ║`);
+  console.log(`║ Метод:              ${method}${''.padEnd(35)} ║`);
+  console.log(`║ Order ID:           ${orderId}${''.padEnd(35)} ║`);
   console.log(`║ Время:              ${new Date().toLocaleString('ru-RU')}${''.padEnd(35)} ║`);
   console.log('╚════════════════════════════════════════════════════════════╝');
 
