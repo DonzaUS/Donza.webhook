@@ -1,16 +1,23 @@
 import express from "express";
 import bodyParser from "body-parser";
 import crypto from "crypto";
+import fetch from 'node-fetch';
+import cors from 'cors';
 
 const app = express();
 
-import cors from 'cors';
-
+// CORS
 app.use(cors({
-  origin: ['https://donza.site', 'https://www.donza.site'], // твой сайт (можно '*' для теста)
+  origin: ['https://donza.site', 'https://www.donza.site'],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
+
+// JSON-парсер — обязательно для /create-payment!
+app.use(bodyParser.json());
+
+// urlencoded — для webhook от FreeKassa
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Только urlencoded — FreeKassa присылает form-data
 app.use(bodyParser.urlencoded({ extended: true }));
