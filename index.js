@@ -214,32 +214,47 @@ app.get("/", (req, res) => {
 // Импорт fetch для запросов к FreeKassa (если ещё нет)
 import fetch from 'node-fetch';
 
-// Маршрут для создания ссылки на оплату (React будет сюда слать запрос)
+// Маршрут для создания ссылки на оплату
 app.post('/create-payment', async (req, res) => {
   const { 
-    amount,       // сумма, например 425
-    orderId,      // уникальный ID заказа, React сам сгенерит
-    method = 44   // метод: 44 = СБП QR, 36 = карты РФ, 43 = SberPay
+    amount,
+    orderId,
+    method = 44,
+    gameId,
+    uc
   } = req.body;
 
-  if (!amount || !orderId) {
-    return res.status(400).json({ success: false, error: 'Нет суммы или ID заказа' });
+  // Проверка обязательных полей
+  if (!amount || !orderId || !gameId) {
+    return res.status(400).json({ success: false, error: 'Нет суммы, ID заказа или игрового ID' });
   }
 
-  const nonce = Date.now(); // уникальное число
+  // Красивый лог в Render Logs — кто и за что оплатил
+  console.log('╔════════════════════════════════════════════════════════════╗');
+  console.log('║                НОВЫЙ ЗАКАЗ НА ОПЛАТУ                     ║');
+  console.log('╠════════════════════════════════════════════════════════════╣');
+  console.log(`║ Игрок ID:           ${req.body.gameId || 'не указан'}${''.padEnd(35)} ║`);
+  console.log(`║ Сумма:              ${req.body.amount} ₽${''.padEnd(35)} ║`);
+  console.log(`║ UC:                 ${req.body.uc || 'не указано'}${''.padEnd(35)} ║`);
+  console.log(`║ Метод:              ${req.body.method || 'не указан'}${''.padEnd(35)} ║`);
+  console.log(`║ Order ID:           ${req.body.orderId}${''.padEnd(35)} ║`);
+  console.log(`║ Время:              ${new Date().toLocaleString('ru-RU')}${''.padEnd(35)} ║`);
+  console.log('╚════════════════════════════════════════════════════════════╝');
+
+  const nonce = Date.now();
 
   const payload = {
-    shopId: Number(process.env.SHOP_ID), // твой ID магазина из env
+    shopId: Number(process.env.SHOP_ID),
     nonce,
     paymentId: String(orderId),
-    i: method,
-    email: 'client@telegram.org', // или реальный email клиента
+    i: Number(method),
+    email: 'client@telegram.org',
     ip: req.ip || '127.0.0.1',
     amount: Number(amount),
     currency: 'RUB'
   };
 
-  // Формируем подпись (как в доках FreeKassa)
+  // Формирование подписи
   const sortedKeys = Object.keys(payload).sort();
   const signString = sortedKeys.map(key => payload[key]).join('|');
   payload.signature = crypto
@@ -257,15 +272,15 @@ app.post('/create-payment', async (req, res) => {
     const data = await response.json();
 
     if (data.type === 'success') {
-      console.log(`Создан заказ ${orderId}, ${amount} ₽ → ${data.location}`);
+      console.log(`УСПЕХ! Заказ ${orderId} создан, ссылка: ${data.location}`);
       res.json({ success: true, link: data.location });
     } else {
-      console.error('FreeKassa ошибка:', data);
-      res.status(500).json({ success: false, error: data.message || 'Ошибка' });
+      console.error('Ошибка FreeKassa:', data);
+      res.status(500).json({ success: false, error: data.message || 'Ошибка создания заказа' });
     }
   } catch (err) {
     console.error('Ошибка запроса:', err);
-    res.status(500).json({ success: false, error: 'Серверная ошибка' });
+    res.status(500).json({ success: false, error: 'Ошибка сервера' });
   }
 });
 
