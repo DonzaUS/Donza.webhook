@@ -4,6 +4,14 @@ import crypto from "crypto";
 
 const app = express();
 
+import cors from 'cors';
+
+app.use(cors({
+  origin: ['https://donza.site', 'https://www.donza.site'], // твой сайт (можно '*' для теста)
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
+
 // Только urlencoded — FreeKassa присылает form-data
 app.use(bodyParser.urlencoded({ extended: true }));
 
