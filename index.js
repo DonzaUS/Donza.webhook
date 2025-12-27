@@ -30,11 +30,11 @@ app.post('/create-payment', async (req, res) => {
     shopId: Number(SHOP_ID),
     nonce,
     paymentId: orderId,
-    amount: Number(amount),
-    currency: 'RUB',
+    i: Number(method),  // Обязательное поле i (ID метода!)
     email: 'client@telegram.org',
     ip: req.ip || '127.0.0.1',
-    i: Number(method)  // Вот оно — обязательное поле i (ID метода!)
+    amount: Number(amount),
+    currency: 'RUB'
   };
 
   const sortedKeys = Object.keys(payload).sort();
@@ -55,7 +55,7 @@ app.post('/create-payment', async (req, res) => {
       res.json({ success: true, link: data.location });
     } else {
       console.error('Ошибка API:', data);
-      res.status(500).json({ success: false, error: data.message || 'Ошибка FreeKassa' });
+      res.status(response.status || 500).json({ success: false, error: data.message || 'Ошибка FreeKassa' });
     }
   } catch (err) {
     console.error('Ошибка fetch:', err);
