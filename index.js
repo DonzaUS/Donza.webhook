@@ -9,7 +9,7 @@ app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 
 const SHOP_ID = process.env.SHOP_ID;
-const SECRET_WORD = process.env.FREEKASSA_SECRET_WORD; // Секретное слово (не API-ключ!)
+const SECRET_WORD = process.env.FREEKASSA_SECRET_WORD;
 
 if (!SHOP_ID || !SECRET_WORD) {
   console.error("Env не найдены: SHOP_ID или FREEKASSA_SECRET_WORD");
@@ -23,18 +23,18 @@ app.post('/create-payment', (req, res) => {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
-  // Формируем строку для MD5-подписи (как в документации)
+  // Формируем строку для MD5-подписи (ТОЧНО как в документации)
   const signString = [
-    SHOP_ID,               // m
-    Number(amount),        // oa
-    SECRET_WORD,           // секретное слово
-    'RUB',                 // currency
-    orderId                // o
+    SHOP_ID,
+    Number(amount),
+    SECRET_WORD,
+    'RUB',
+    orderId
   ].join(':');
 
   const signature = crypto.createHash('md5').update(signString).digest('hex');
 
-  // Параметры для ссылки (как в примере документации)
+  // Параметры для ссылки (ТОЧНО как в примере)
   const params = new URLSearchParams({
     m: SHOP_ID,
     oa: amount,
