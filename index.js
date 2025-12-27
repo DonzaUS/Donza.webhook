@@ -23,9 +23,10 @@ app.post('/create-payment', (req, res) => {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
-  // Сумма ВСЕГДА с .00 (2125.00, 425.00)
+  // Сумма ВСЕГДА с .00 (425 → 425.00)
   const amountStr = Number(amount).toFixed(2);
 
+  // Точная строка для MD5 (как в документации)
   const signString = `${SHOP_ID}:${amountStr}:${SECRET_WORD}:RUB:${orderId}`;
 
   const signature = crypto.createHash('md5').update(signString).digest('hex');
@@ -37,7 +38,8 @@ app.post('/create-payment', (req, res) => {
     currency: 'RUB',
     s: signature,
     desc: `${uc} UC в Donza - ID: ${gameId}`,
-    lang: 'ru'
+    lang: 'ru',
+    i: '1'  // Можно заменить на 44 для СБП или 36 для карт
   });
 
   const paymentLink = `https://pay.freekassa.net/?${params.toString()}`;
@@ -50,4 +52,4 @@ app.post('/create-payment', (req, res) => {
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Сервер на ${PORT}`));
+app.listen(PORT, () => console.log(`Сервер запущен на ${PORT}`));
