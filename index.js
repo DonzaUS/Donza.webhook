@@ -23,8 +23,8 @@ app.post('/create-payment', (req, res) => {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
-  // Самое важное: сумма как чистая строка БЕЗ точки и нулей
-  const amountStr = Math.floor(Number(amount)).toString(); // 425 → "425", 2100 → "2100"
+  // Сумма ВСЕГДА с .00 (2125.00, 425.00)
+  const amountStr = Number(amount).toFixed(2);
 
   const signString = `${SHOP_ID}:${amountStr}:${SECRET_WORD}:RUB:${orderId}`;
 
