@@ -6,17 +6,17 @@ import cors from 'cors';
 
 const app = express();
 
-// CORS — разрешаем запросы с сайта и localhost
+// CORS — разрешаем запросы с твоего сайта и localhost
 app.use(cors({
   origin: ['https://donza.site', 'https://www.donza.site', 'http://localhost:5173'],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
 
-// Парсер JSON — обязательно для React-запросов
+// JSON-парсер — для React-запросов (/create-payment)
 app.use(bodyParser.json());
 
-// Парсер urlencoded — для webhook FreeKassa
+// urlencoded — для webhook FreeKassa
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // IP FreeKassa (актуальные на декабрь 2025)
@@ -32,7 +32,7 @@ const SECRET_WORD_2 = process.env.FREEKASSA_SECRET_2;
 const API_KEY = process.env.FREEKASSA_API_KEY;
 const SHOP_ID = process.env.SHOP_ID;
 
-// Проверка env — если чего-то нет, сервер не запустится
+// Проверка env — если чего-то нет, сервер упадёт с понятной ошибкой
 if (!SECRET_WORD_2) {
   console.error("❌ FREEKASSA_SECRET_2 не найден в env!");
   process.exit(1);
@@ -99,7 +99,7 @@ app.get("/webhook", (req, res) => {
   res.send("Webhook работает ✓");
 });
 
-// Страница успеха
+// Success страница
 app.get("/success", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -110,18 +110,20 @@ app.get("/success", (req, res) => {
       <title>Оплата прошла!</title>
       <style>
         body { font-family: sans-serif; text-align: center; padding: 80px; background: #f8f9fa; color: #333; }
-        h1 { color: #28a745; }
+        h1 { color: #28a745; margin-bottom: 20px; }
+        p { font-size: 1.2em; margin: 20px 0; }
       </style>
     </head>
     <body>
-      <h1>Спасибо! Оплата прошла 🎉</h1>
-      <p>Награды будут доставлены.</p>
+      <h1>Спасибо! Оплата успешно прошла 🎉</h1>
+      <p>Награды будут доставлены как можно скорее.</p>
+      <p>Перенаправление через 5 сек...</p>
     </body>
     </html>
   `);
 });
 
-// Страница неудачи
+// Failure страница
 app.get("/failure", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -132,12 +134,14 @@ app.get("/failure", (req, res) => {
       <title>Оплата не прошла</title>
       <style>
         body { font-family: sans-serif; text-align: center; padding: 80px; background: #f8f9fa; color: #333; }
-        h1 { color: #dc3545; }
+        h1 { color: #dc3545; margin-bottom: 20px; }
+        p { font-size: 1.2em; margin: 20px 0; }
       </style>
     </head>
     <body>
       <h1>Оплата не удалась 😔</h1>
-      <p>Попробуйте снова.</p>
+      <p>Попробуйте снова или свяжитесь с поддержкой.</p>
+      <p>Перенаправление через 9 сек...</p>
     </body>
     </html>
   `);
@@ -145,7 +149,7 @@ app.get("/failure", (req, res) => {
 
 // Главная
 app.get("/", (req, res) => {
-  res.send("Сервер работает!");
+  res.send("Сервер работает! Webhook и create-payment готовы.");
 });
 
 // Создание оплаты
@@ -200,9 +204,16 @@ app.post('/create-payment', async (req, res) => {
 
     console.log('Статус FreeKassa:', response.status);
 
-    const data = await response.json();
+    const text = await response.text();
+    console.log('Сырой ответ FreeKassa:', text);
 
-    console.log('Ответ FreeKassa:', data);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('Не удалось распарсить ответ FreeKassa:', e);
+      return res.status(500).json({ success: false, error: 'Неверный ответ от FreeKassa' });
+    }
 
     if (data.type === 'success') {
       console.log(`УСПЕХ! Заказ ${orderId} создан, ссылка: ${data.location}`);
