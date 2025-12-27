@@ -6,20 +6,17 @@ import cors from 'cors';
 
 const app = express();
 
-// CORS
+// CORS (разрешаем запросы с твоего сайта)
 app.use(cors({
-  origin: ['https://donza.site', 'https://www.donza.site'],
+  origin: ['https://donza.site', 'https://www.donza.site', 'http://localhost:5173'], // Добавил localhost для тестов
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
 
-// JSON-парсер — обязательно для /create-payment!
+// JSON-парсер — для запросов от React (create-payment)
 app.use(bodyParser.json());
 
 // urlencoded — для webhook от FreeKassa
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// Только urlencoded — FreeKassa присылает form-data
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Актуальные IP FreeKassa (на декабрь 2025)
@@ -30,22 +27,30 @@ const FREEKASSA_IPS = new Set([
   "51.250.54.238"
 ]);
 
-// ← Вот сюда вставь свой настоящий секрет №2 !!!
-const SECRET_WORD_2 = process.env.FREEKASSA_SECRET_2; // Секретное слово 2 из env
-const API_KEY = process.env.FREEKASSA_API_KEY; // API-ключ из env
+// Секреты из env (проверь на Render: Settings → Environment)
+const SECRET_WORD_2 = process.env.FREEKASSA_SECRET_2;
+const API_KEY = process.env.FREEKASSA_API_KEY;
+const SHOP_ID = process.env.SHOP_ID; // Добавил SHOP_ID — оно должно быть в env
 
+// Проверки env (если чего-то нет — сервер не запустится)
 if (!SECRET_WORD_2) {
   console.error("❌ Секретное слово 2 не найдено в env! Добавь на Render.");
+  process.exit(1);
 }
 if (!API_KEY) {
   console.error("❌ API-ключ не найден в env! Добавь на Render для создания заказов.");
+  process.exit(1);
+}
+if (!SHOP_ID) {
+  console.error("❌ SHOP_ID не найден в env! Добавь на Render.");
+  process.exit(1);
 }
 
 // Webhook от FreeKassa
 app.post("/webhook", (req, res) => {
   const data = req.body;
 
-  // 1. Проверка IP (очень важно!)
+  // 1. Проверка IP
   const clientIp = req.headers["x-real-ip"] || 
                    req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || 
                    req.socket.remoteAddress;
@@ -55,7 +60,7 @@ app.post("/webhook", (req, res) => {
     return res.status(403).send("Forbidden");
   }
 
-  // 2. Проверка наличия ключевых полей
+  // 2. Проверка полей
   if (!data.MERCHANT_ID || !data.AMOUNT || !data.MERCHANT_ORDER_ID || !data.SIGN) {
     console.warn("Неполные данные в вебхуке", data);
     return res.status(400).send("Bad Request");
@@ -80,8 +85,7 @@ app.post("/webhook", (req, res) => {
     return res.status(403).send("Invalid signature");
   }
 
-  // 4. Здесь просто логируем успешную оплату
-  // (потом можно будет добавить email в Telegram, файл и т.д.)
+  // 4. Лог успешной оплаты
   console.log("УСПЕШНАЯ ОПЛАТА!", {
     orderId: data.MERCHANT_ORDER_ID,
     amount: data.AMOUNT,
@@ -91,20 +95,18 @@ app.post("/webhook", (req, res) => {
     time: new Date().toISOString()
   });
 
-  // 5. Обязательно отвечаем YES (FreeKassa ждёт именно это!)
+  // 5. Отвечаем YES
   res.send("YES");
 });
 
-// Для проверки, что сервер жив
+// Тест webhook
 app.get("/webhook", (req, res) => {
   res.send("Webhook работает ✓");
 });
 
-const PORT = process.env.PORT || 8080;
-
-// Страница успеха — показываем "Спасибо" 5 секунд, потом редирект
+// Страница успеха
 app.get("/success", (req, res) => {
-  console.log("Успешная оплата — показываем спасибо 5 сек, редирект на магазин");
+  console.log("Успешная оплата — показываем спасибо");
   res.send(`
     <!DOCTYPE html>
     <html lang="ru">
@@ -113,34 +115,24 @@ app.get("/success", (req, res) => {
       <meta http-equiv="refresh" content="5;url=https://www.donza.site/shop">
       <title>Оплата прошла!</title>
       <style>
-        body {
-          font-family: sans-serif;
-          text-align: center;
-          padding: 80px;
-          background: #f8f9fa;
-          color: #333;
-        }
+        body { font-family: sans-serif; text-align: center; padding: 80px; background: #f8f9fa; color: #333; }
         h1 { color: #28a745; margin-bottom: 20px; }
         p { font-size: 1.2em; margin: 20px 0; }
-        .redirect-info { 
-          font-size: 1em; 
-          color: #666; 
-          margin-top: 40px;
-        }
+        .redirect-info { font-size: 1em; color: #666; margin-top: 40px; }
       </style>
     </head>
     <body>
       <h1>Спасибо! Оплата успешно прошла 🎉</h1>
       <p> Награды будут доставлены как можно скорее </p>
-      <p class="redirect-info">Если перенаправление не сработало автоматически — <a href="https://www.donza.site/shop">нажмите сюда</a></p>
+      <p class="redirect-info">Если перенаправление не сработало — <a href="https://www.donza.site/shop">нажмите сюда</a></p>
     </body>
     </html>
   `);
 });
 
-// Страница неудачи — показываем сообщение 5 секунд, потом редирект на магазин
+// Страница неудачи
 app.get("/failure", (req, res) => {
-  console.log("Неудачная оплата — показываем сообщение 5 сек, редирект на магазин");
+  console.log("Неудачная оплата — показываем сообщение");
   res.send(`
     <!DOCTYPE html>
     <html lang="ru">
@@ -149,33 +141,22 @@ app.get("/failure", (req, res) => {
       <meta http-equiv="refresh" content="9;url=https://www.donza.site/shop">
       <title>Оплата не прошла</title>
       <style>
-        body {
-          font-family: sans-serif;
-          text-align: center;
-          padding: 80px;
-          background: #f8f9fa;
-          color: #333;
-        }
+        body { font-family: sans-serif; text-align: center; padding: 80px; background: #f8f9fa; color: #333; }
         h1 { color: #dc3545; margin-bottom: 20px; }
         p { font-size: 1.2em; margin: 20px 0; }
-        .redirect-info { 
-          font-size: 1em; 
-          color: #666; 
-          margin-top: 40px;
-        }
+        .redirect-info { font-size: 1em; color: #666; margin-top: 40px; }
       </style>
     </head>
     <body>
       <h1>Оплата не удалась 😔</h1>
       <p>Возможно, проблема с картой, недостаточно средств или вы отменили платёж.</p>
-      <p></p>
       <p class="redirect-info">Если перенаправление не сработало — <a href="https://www.donza.site/shop">нажмите сюда</a></p>
     </body>
     </html>
   `);
 });
 
-// Главная страница (корневой путь /)
+// Главная
 app.get("/", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -185,21 +166,10 @@ app.get("/", (req, res) => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Платёжный сервис</title>
       <style>
-        body { 
-          font-family: sans-serif; 
-          text-align: center; 
-          padding: 50px; 
-          background: #f8f9fa;
-        }
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f8f9fa; }
         .container { max-width: 600px; margin: 0 auto; }
         h1 { color: #333; }
-        .status { 
-          background: #e7f3ff; 
-          padding: 20px; 
-          border-radius: 8px; 
-          margin: 20px 0; 
-          border-left: 4px solid #007bff;
-        }
+        .status { background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #007bff; }
       </style>
     </head>
     <body>
@@ -218,26 +188,24 @@ app.get("/", (req, res) => {
   `);
 });
 
-// Импорт fetch для запросов к FreeKassa (если ещё нет)
-import fetch from 'node-fetch';
-
 // Маршрут для создания ссылки на оплату
 app.post('/create-payment', async (req, res) => {
+  console.log('Получен запрос на оплату, req.body:', req.body); // Лог для проверки
+
   const { 
     amount, 
     orderId, 
     method = 44,
-    gameId,   // ← Обязательно добавь
-    uc        // ← Для логов
+    gameId, 
+    uc 
   } = req.body;
 
-  // Проверка (теперь видит gameId)
   if (!amount || !orderId || !gameId) {
     console.log('Ошибка: не хватает полей', { amount, orderId, gameId });
     return res.status(400).json({ success: false, error: 'Нет суммы, ID заказа или игрового ID' });
   }
 
-  // Лог в Render (красивый)
+  // Красивый лог
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║                НОВЫЙ ЗАКАЗ НА ОПЛАТУ                     ║');
   console.log('╠════════════════════════════════════════════════════════════╣');
@@ -252,7 +220,7 @@ app.post('/create-payment', async (req, res) => {
   const nonce = Date.now();
 
   const payload = {
-    shopId: Number(process.env.SHOP_ID),
+    shopId: Number(SHOP_ID), // Из env
     nonce,
     paymentId: String(orderId),
     i: Number(method),
@@ -262,11 +230,10 @@ app.post('/create-payment', async (req, res) => {
     currency: 'RUB'
   };
 
-  // Формирование подписи
   const sortedKeys = Object.keys(payload).sort();
   const signString = sortedKeys.map(key => payload[key]).join('|');
   payload.signature = crypto
-    .createHmac('sha256', process.env.FREEKASSA_API_KEY)
+    .createHmac('sha256', API_KEY)
     .update(signString)
     .digest('hex');
 
