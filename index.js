@@ -18,17 +18,17 @@ const API_KEY = process.env.FREEKASSA_API_KEY;
 const SHOP_ID = process.env.SHOP_ID;
 
 if (!API_KEY || !SHOP_ID) {
-  console.error("❌ Не все env-переменные найдены!");
+  console.error("❌ Не все env-переменные!");
   process.exit(1);
 }
 
 app.post('/create-payment', (req, res) => {
-  console.log('Получен запрос:', req.body);
+  console.log('Запрос:', req.body);
 
   const { amount, orderId, gameId, uc } = req.body;
 
   if (!amount || !orderId || !gameId) {
-    return res.status(400).json({ success: false, error: 'Нет суммы, ID заказа или игрового ID' });
+    return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
   const nonce = Date.now();
@@ -50,7 +50,7 @@ app.post('/create-payment', (req, res) => {
     .update(signString)
     .digest('hex');
 
-  console.log('Ссылка на оплату:', `https://pay.freekassa.net/?${new URLSearchParams(payload).toString()}`);
+  console.log('Ссылка:', `https://pay.freekassa.net/?${new URLSearchParams(payload).toString()}`);
 
   res.json({ success: true, link: `https://pay.freekassa.net/?${new URLSearchParams(payload).toString()}` });
 });
@@ -58,5 +58,5 @@ app.post('/create-payment', (req, res) => {
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
+  console.log(`Сервер на ${PORT}`);
 });
