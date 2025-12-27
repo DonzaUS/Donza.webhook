@@ -8,40 +8,46 @@ const app = express();
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 
-const API_KEY = process.env.FREEKASSA_API_KEY;
+const SECRET_WORD = process.env.FREEKASSA_SECRET_WORD; // Секретное слово из FreeKassa (не API-ключ!)
 const SHOP_ID = process.env.SHOP_ID;
 
-if (!API_KEY || !SHOP_ID) {
-  console.error("Env не найдены");
+if (!SECRET_WORD || !SHOP_ID) {
+  console.error("Env не найдены: FREEKASSA_SECRET_WORD или SHOP_ID");
   process.exit(1);
 }
 
 app.post('/create-payment', (req, res) => {
+  console.log('Запрос:', req.body);
+
   const { amount, orderId, gameId, uc } = req.body;
 
   if (!amount || !orderId || !gameId) {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
-  const nonce = Date.now().toString();
+  const signString = [
+    SHOP_ID,
+    Number(amount),
+    SECRET_WORD,
+    'RUB',
+    orderId
+  ].join(':');
 
-  const payload = {
-    shopId: Number(SHOP_ID),
-    nonce,
-    paymentId: orderId,
-    amount: Number(amount),
+  const signature = crypto.createHash('md5').update(signString).digest('hex');
+
+  const params = new URLSearchParams({
+    m: SHOP_ID,
+    oa: amount,
+    o: orderId,
     currency: 'RUB',
-    email: 'client@telegram.org',
-    ip: req.ip || '127.0.0.1'
-  };
+    s: signature,
+    desc: `${uc} UC в Donza - ID: ${gameId}`,
+    lang: 'ru'
+  });
 
-  const sortedKeys = Object.keys(payload).sort();
-  const signString = sortedKeys.map(key => payload[key]).join('|');
-  payload.signature = crypto.createHmac('sha256', API_KEY).update(signString).digest('hex');
+  const paymentLink = `https://pay.freekassa.net/?${params.toString()}`;
 
-  const paymentLink = `https://pay.freekassa.net/?${new URLSearchParams(payload).toString()}`;
-
-  console.log('Ссылка:', paymentLink);
+  console.log('Готовая ссылка:', paymentLink);
 
   res.json({ success: true, link: paymentLink });
 });
