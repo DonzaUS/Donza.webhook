@@ -9,10 +9,10 @@ app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 
 const SHOP_ID = process.env.SHOP_ID;
-const SECRET_WORD = process.env.FREEKASSA_SECRET_WORD; // ТОЧНО это имя!
+const SECRET = process.env.SECRET; // Короткое имя — SECRET
 
-if (!SHOP_ID || !SECRET_WORD) {
-  console.error("Env не найдены: SHOP_ID = " + SHOP_ID + ", FREEKASSA_SECRET_WORD = " + SECRET_WORD);
+if (!SHOP_ID || !SECRET) {
+  console.error("Env не найдены: SHOP_ID или SECRET");
   process.exit(1);
 }
 
@@ -23,11 +23,11 @@ app.post('/create-payment', (req, res) => {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
-  // Строка для MD5-подписи (ТОЧНО как в документации FreeKassa)
+  // Точная строка для MD5-подписи (как в документации FreeKassa)
   const signString = [
     SHOP_ID,
     Number(amount),
-    SECRET_WORD,
+    SECRET,
     'RUB',
     orderId
   ].join(':');
