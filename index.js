@@ -5,7 +5,7 @@ import cors from 'cors';
 
 const app = express();
 
-app.use(cors({ origin: '*' })); // для теста
+app.use(cors({ origin: '*' })); // для теста, потом сузь
 app.use(bodyParser.json());
 
 const API_KEY = process.env.FREEKASSA_API_KEY;
@@ -17,6 +17,8 @@ if (!API_KEY || !SHOP_ID) {
 }
 
 app.post('/create-payment', (req, res) => {
+  console.log('Запрос:', req.body);
+
   const { amount, orderId, gameId } = req.body;
 
   if (!amount || !orderId || !gameId) {
@@ -40,6 +42,8 @@ app.post('/create-payment', (req, res) => {
   payload.signature = crypto.createHmac('sha256', API_KEY).update(signString).digest('hex');
 
   const paymentLink = `https://pay.freekassa.net/?${new URLSearchParams(payload).toString()}`;
+
+  console.log('Готовая ссылка:', paymentLink);
 
   res.json({ success: true, link: paymentLink });
 });
