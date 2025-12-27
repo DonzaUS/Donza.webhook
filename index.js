@@ -9,10 +9,10 @@ app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 
 const SHOP_ID = process.env.SHOP_ID;
-const SECRET_WORD = process.env.SECRET_WORD; // Твоё секретное слово
+const SECRET_WORD = process.env.SECRET_WORD;
 
 if (!SHOP_ID || !SECRET_WORD) {
-  console.error("Env не найдены: SHOP_ID или SECRET_WORD");
+  console.error("Env не найдены");
   process.exit(1);
 }
 
@@ -23,18 +23,19 @@ app.post('/create-payment', (req, res) => {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
-  // Точная строка для MD5-подписи (как в документации)
-  const signString = `${SHOP_ID}:${amount}:${SECRET_WORD}:RUB:${orderId}`;
+  // Самое важное: сумма как чистая строка БЕЗ точки и нулей
+  const amountStr = Math.floor(Number(amount)).toString(); // 425 → "425", 2100 → "2100"
 
-  const s = crypto.createHash('md5').update(signString).digest('hex');
+  const signString = `${SHOP_ID}:${amountStr}:${SECRET_WORD}:RUB:${orderId}`;
 
-  // Параметры для ссылки (только необходимые + desc для удобства)
+  const signature = crypto.createHash('md5').update(signString).digest('hex');
+
   const params = new URLSearchParams({
     m: SHOP_ID,
-    oa: amount,
+    oa: amountStr,
     o: orderId,
     currency: 'RUB',
-    s: s,
+    s: signature,
     desc: `${uc} UC в Donza - ID: ${gameId}`,
     lang: 'ru'
   });
@@ -42,11 +43,11 @@ app.post('/create-payment', (req, res) => {
   const paymentLink = `https://pay.freekassa.net/?${params.toString()}`;
 
   console.log('Строка для подписи:', signString);
-  console.log('Подпись s:', s);
+  console.log('Подпись s:', signature);
   console.log('Готовая ссылка:', paymentLink);
 
   res.json({ success: true, link: paymentLink });
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Сервер запущен на ${PORT}`));
+app.listen(PORT, () => console.log(`Сервер на ${PORT}`));
