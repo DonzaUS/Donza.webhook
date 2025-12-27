@@ -2,66 +2,51 @@ import express from "express";
 import bodyParser from "body-parser";
 import crypto from "crypto";
 import cors from 'cors';
-import fetch from 'node-fetch';
 
 const app = express();
 
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 
-const API_KEY = process.env.FREEKASSA_API_KEY;
 const SHOP_ID = process.env.SHOP_ID;
+const SECRET_WORD = process.env.SECRET_WORD; // Твоё секретное слово
 
-if (!API_KEY || !SHOP_ID) {
-  console.error("Env не найдены");
+if (!SHOP_ID || !SECRET_WORD) {
+  console.error("Env не найдены: SHOP_ID или SECRET_WORD");
   process.exit(1);
 }
 
-app.post('/create-payment', async (req, res) => {
-  const { amount, orderId, gameId, uc, method } = req.body;
+app.post('/create-payment', (req, res) => {
+  const { amount, orderId, gameId, uc } = req.body;
 
-  if (!amount || !orderId || !gameId || !method) {
-    return res.status(400).json({ success: false, error: 'Нет суммы/ID/метода' });
+  if (!amount || !orderId || !gameId) {
+    return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
-  const nonce = Date.now().toString();
+  // Точная строка для MD5-подписи (как в документации)
+  const signString = `${SHOP_ID}:${amount}:${SECRET_WORD}:RUB:${orderId}`;
 
-  const payload = {
-    shopId: Number(SHOP_ID),
-    nonce,
-    paymentId: orderId,
-    i: Number(method),  // Обязательное поле i (ID метода!)
-    email: 'client@telegram.org',
-    ip: req.ip || '127.0.0.1',
-    amount: Number(amount),
-    currency: 'RUB'
-  };
+  const s = crypto.createHash('md5').update(signString).digest('hex');
 
-  const sortedKeys = Object.keys(payload).sort();
-  const signString = sortedKeys.map(key => payload[key]).join('|');
-  payload.signature = crypto.createHmac('sha256', API_KEY).update(signString).digest('hex');
+  // Параметры для ссылки (только необходимые + desc для удобства)
+  const params = new URLSearchParams({
+    m: SHOP_ID,
+    oa: amount,
+    o: orderId,
+    currency: 'RUB',
+    s: s,
+    desc: `${uc} UC в Donza - ID: ${gameId}`,
+    lang: 'ru'
+  });
 
-  try {
-    const response = await fetch('https://api.fk.life/v1/orders/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+  const paymentLink = `https://pay.freekassa.net/?${params.toString()}`;
 
-    const data = await response.json();
+  console.log('Строка для подписи:', signString);
+  console.log('Подпись s:', s);
+  console.log('Готовая ссылка:', paymentLink);
 
-    if (data.type === 'success') {
-      console.log('Успех API:', data.location);
-      res.json({ success: true, link: data.location });
-    } else {
-      console.error('Ошибка API:', data);
-      res.status(response.status || 500).json({ success: false, error: data.message || 'Ошибка FreeKassa' });
-    }
-  } catch (err) {
-    console.error('Ошибка fetch:', err);
-    res.status(500).json({ success: false, error: 'Ошибка сервера' });
-  }
+  res.json({ success: true, link: paymentLink });
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Сервер на ${PORT}`));
+app.listen(PORT, () => console.log(`Сервер запущен на ${PORT}`));
