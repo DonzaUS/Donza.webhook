@@ -18,10 +18,10 @@ if (!API_KEY || !SHOP_ID) {
 }
 
 app.post('/create-payment', async (req, res) => {
-  const { amount, orderId, gameId, uc } = req.body;
+  const { amount, orderId, gameId, uc, method } = req.body;
 
-  if (!amount || !orderId || !gameId) {
-    return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
+  if (!amount || !orderId || !gameId || !method) {
+    return res.status(400).json({ success: false, error: 'Нет суммы/ID/метода' });
   }
 
   const nonce = Date.now().toString();
@@ -33,10 +33,10 @@ app.post('/create-payment', async (req, res) => {
     amount: Number(amount),
     currency: 'RUB',
     email: 'client@telegram.org',
-    ip: req.ip || '127.0.0.1'
+    ip: req.ip || '127.0.0.1',
+    i: Number(method)  // Вот оно — обязательное поле i (ID метода!)
   };
 
-  // Подпись по документации (SHA256 + implode('|'))
   const sortedKeys = Object.keys(payload).sort();
   const signString = sortedKeys.map(key => payload[key]).join('|');
   payload.signature = crypto.createHmac('sha256', API_KEY).update(signString).digest('hex');
