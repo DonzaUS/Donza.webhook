@@ -9,10 +9,10 @@ app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 
 const SHOP_ID = process.env.SHOP_ID;
-const SECRET = process.env.SECRET; // Короткое имя — SECRET
+const SECRET = process.env.SECRET; // или FREEKASSA_SECRET_WORD
 
 if (!SHOP_ID || !SECRET) {
-  console.error("Env не найдены: SHOP_ID или SECRET");
+  console.error("Env не найдены");
   process.exit(1);
 }
 
@@ -23,10 +23,12 @@ app.post('/create-payment', (req, res) => {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
-  // Точная строка для MD5-подписи (как в документации FreeKassa)
+  // Amount как строка (важно!)
+  const amountStr = amount.toString();
+
   const signString = [
-    SHOP_ID,
-    Number(amount),
+    SHOP_ID.toString(),
+    amountStr,
     SECRET,
     'RUB',
     orderId
@@ -35,8 +37,8 @@ app.post('/create-payment', (req, res) => {
   const signature = crypto.createHash('md5').update(signString).digest('hex');
 
   const params = new URLSearchParams({
-    m: SHOP_ID,
-    oa: amount,
+    m: SHOP_ID.toString(),
+    oa: amountStr,
     o: orderId,
     currency: 'RUB',
     s: signature,
@@ -48,6 +50,8 @@ app.post('/create-payment', (req, res) => {
 
   const paymentLink = `https://pay.freekassa.net/?${params.toString()}`;
 
+  console.log('Строка для подписи:', signString);
+  console.log('Подпись:', signature);
   console.log('Готовая ссылка:', paymentLink);
 
   res.json({ success: true, link: paymentLink });
