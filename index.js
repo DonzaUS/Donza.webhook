@@ -8,33 +8,33 @@ const app = express();
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 
-const SECRET_WORD = process.env.FREEKASSA_SECRET_WORD; // Секретное слово из FreeKassa (не API-ключ!)
 const SHOP_ID = process.env.SHOP_ID;
+const SECRET_WORD = process.env.FREEKASSA_SECRET_WORD; // Секретное слово (не API-ключ!)
 
-if (!SECRET_WORD || !SHOP_ID) {
-  console.error("Env не найдены: FREEKASSA_SECRET_WORD или SHOP_ID");
+if (!SHOP_ID || !SECRET_WORD) {
+  console.error("Env не найдены: SHOP_ID или FREEKASSA_SECRET_WORD");
   process.exit(1);
 }
 
 app.post('/create-payment', (req, res) => {
-  console.log('Запрос:', req.body);
-
   const { amount, orderId, gameId, uc } = req.body;
 
   if (!amount || !orderId || !gameId) {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
   }
 
+  // Формируем строку для MD5-подписи (как в документации)
   const signString = [
-    SHOP_ID,
-    Number(amount),
-    SECRET_WORD,
-    'RUB',
-    orderId
+    SHOP_ID,               // m
+    Number(amount),        // oa
+    SECRET_WORD,           // секретное слово
+    'RUB',                 // currency
+    orderId                // o
   ].join(':');
 
   const signature = crypto.createHash('md5').update(signString).digest('hex');
 
+  // Параметры для ссылки (как в примере документации)
   const params = new URLSearchParams({
     m: SHOP_ID,
     oa: amount,
@@ -42,7 +42,9 @@ app.post('/create-payment', (req, res) => {
     currency: 'RUB',
     s: signature,
     desc: `${uc} UC в Donza - ID: ${gameId}`,
-    lang: 'ru'
+    lang: 'ru',
+    email: 'client@telegram.org',
+    ip: req.ip || '127.0.0.1'
   });
 
   const paymentLink = `https://pay.freekassa.net/?${params.toString()}`;
@@ -53,4 +55,4 @@ app.post('/create-payment', (req, res) => {
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Сервер на ${PORT}`));
+app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
