@@ -6,20 +6,20 @@ import cors from 'cors';
 
 const app = express();
 
-// CORS (разрешаем с твоего сайта и localhost для тестов)
+// CORS — разрешаем запросы с сайта и localhost
 app.use(cors({
   origin: ['https://donza.site', 'https://www.donza.site', 'http://localhost:5173'],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
 
-// JSON-парсер — для /create-payment от React
+// Парсер JSON — обязательно для React-запросов
 app.use(bodyParser.json());
 
-// urlencoded — только один раз! Для webhook FreeKassa
+// Парсер urlencoded — для webhook FreeKassa
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// IP FreeKassa (актуальные на 2025)
+// IP FreeKassa (актуальные на декабрь 2025)
 const FREEKASSA_IPS = new Set([
   "168.119.157.136",
   "168.119.60.227",
@@ -27,11 +27,12 @@ const FREEKASSA_IPS = new Set([
   "51.250.54.238"
 ]);
 
-// Env-переменные (проверь на Render: Settings → Environment)
+// Env-переменные
 const SECRET_WORD_2 = process.env.FREEKASSA_SECRET_2;
 const API_KEY = process.env.FREEKASSA_API_KEY;
 const SHOP_ID = process.env.SHOP_ID;
 
+// Проверка env — если чего-то нет, сервер не запустится
 if (!SECRET_WORD_2) {
   console.error("❌ FREEKASSA_SECRET_2 не найден в env!");
   process.exit(1);
@@ -45,7 +46,7 @@ if (!SHOP_ID) {
   process.exit(1);
 }
 
-// Webhook FreeKassa
+// Webhook от FreeKassa
 app.post("/webhook", (req, res) => {
   const data = req.body;
 
@@ -98,7 +99,7 @@ app.get("/webhook", (req, res) => {
   res.send("Webhook работает ✓");
 });
 
-// Success страница
+// Страница успеха
 app.get("/success", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -109,20 +110,18 @@ app.get("/success", (req, res) => {
       <title>Оплата прошла!</title>
       <style>
         body { font-family: sans-serif; text-align: center; padding: 80px; background: #f8f9fa; color: #333; }
-        h1 { color: #28a745; margin-bottom: 20px; }
-        p { font-size: 1.2em; margin: 20px 0; }
+        h1 { color: #28a745; }
       </style>
     </head>
     <body>
       <h1>Спасибо! Оплата прошла 🎉</h1>
       <p>Награды будут доставлены.</p>
-      <p>Перенаправление через 5 сек...</p>
     </body>
     </html>
   `);
 });
 
-// Failure страница
+// Страница неудачи
 app.get("/failure", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -133,14 +132,12 @@ app.get("/failure", (req, res) => {
       <title>Оплата не прошла</title>
       <style>
         body { font-family: sans-serif; text-align: center; padding: 80px; background: #f8f9fa; color: #333; }
-        h1 { color: #dc3545; margin-bottom: 20px; }
-        p { font-size: 1.2em; margin: 20px 0; }
+        h1 { color: #dc3545; }
       </style>
     </head>
     <body>
       <h1>Оплата не удалась 😔</h1>
-      <p>Попробуйте снова или свяжитесь с поддержкой.</p>
-      <p>Перенаправление через 9 сек...</p>
+      <p>Попробуйте снова.</p>
     </body>
     </html>
   `);
@@ -148,7 +145,7 @@ app.get("/failure", (req, res) => {
 
 // Главная
 app.get("/", (req, res) => {
-  res.send("Сервер работает! Webhook готов.");
+  res.send("Сервер работает!");
 });
 
 // Создание оплаты
@@ -168,12 +165,12 @@ app.post('/create-payment', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Нет суммы, ID заказа или игрового ID' });
   }
 
-  console.log('Успех проверки! Игрок:', gameId, 'Сумма:', amount, 'UC:', uc);
+  console.log('Проверка пройдена! Игрок:', gameId, 'Сумма:', amount, 'UC:', uc);
 
   const nonce = Date.now();
 
   const payload = {
-    shopId: Number(process.env.SHOP_ID),
+    shopId: Number(SHOP_ID),
     nonce,
     paymentId: String(orderId),
     i: Number(method),
@@ -183,12 +180,16 @@ app.post('/create-payment', async (req, res) => {
     currency: 'RUB'
   };
 
+  console.log('Отправляем в FreeKassa:', payload);
+
   const sortedKeys = Object.keys(payload).sort();
   const signString = sortedKeys.map(key => payload[key]).join('|');
   payload.signature = crypto
-    .createHmac('sha256', process.env.FREEKASSA_API_KEY)
+    .createHmac('sha256', API_KEY)
     .update(signString)
     .digest('hex');
+
+  console.log('Подпись:', payload.signature);
 
   try {
     const response = await fetch('https://api.fk.life/v1/orders/create', {
@@ -197,7 +198,11 @@ app.post('/create-payment', async (req, res) => {
       body: JSON.stringify(payload)
     });
 
+    console.log('Статус FreeKassa:', response.status);
+
     const data = await response.json();
+
+    console.log('Ответ FreeKassa:', data);
 
     if (data.type === 'success') {
       console.log(`УСПЕХ! Заказ ${orderId} создан, ссылка: ${data.location}`);
@@ -207,8 +212,8 @@ app.post('/create-payment', async (req, res) => {
       res.status(500).json({ success: false, error: data.message || 'Ошибка создания заказа' });
     }
   } catch (err) {
-    console.error('Ошибка запроса:', err);
-    res.status(500).json({ success: false, error: 'Ошибка сервера' });
+    console.error('Ошибка fetch FreeKassa:', err.message);
+    res.status(500).json({ success: false, error: 'Ошибка сервера: ' + err.message });
   }
 });
 
