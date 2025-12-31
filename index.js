@@ -17,18 +17,17 @@ if (!SHOP_ID || !SECRET_WORD) {
 }
 
 app.post('/create-payment', (req, res) => {
-  const { amount, orderId, gameId, uc } = req.body;
+  const { amount, orderId, gameId, uc, method } = req.body; // ← добавил method
 
-  if (!amount || !orderId || !gameId) {
-    return res.status(400).json({ success: false, error: 'Нет суммы/ID' });
+  if (!amount || !orderId || !gameId || !method) {
+    return res.status(400).json({ success: false, error: 'Нет суммы/ID/метода' });
   }
 
-  // Сумма ВСЕГДА с .00 (425 → 425.00)
+  // Сумма всегда с .00
   const amountStr = Number(amount).toFixed(2);
 
-  // Точная строка для MD5 (как в документации)
+  // Подпись MD5 (точно как в документации)
   const signString = `${SHOP_ID}:${amountStr}:${SECRET_WORD}:RUB:${orderId}`;
-
   const signature = crypto.createHash('md5').update(signString).digest('hex');
 
   const params = new URLSearchParams({
@@ -39,7 +38,7 @@ app.post('/create-payment', (req, res) => {
     s: signature,
     desc: `${uc} UC в Donza - ID: ${gameId}`,
     lang: 'ru',
-    i: method.toString() // Можно заменить на 44 для СБП или 36 для карт
+    i: method.toString()  // ← теперь i = 44 или 36 — работает!
   });
 
   const paymentLink = `https://pay.freekassa.net/?${params.toString()}`;
@@ -52,4 +51,4 @@ app.post('/create-payment', (req, res) => {
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Сервер запущен на ${PORT}`));
+app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
