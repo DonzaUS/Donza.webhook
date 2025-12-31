@@ -39,7 +39,7 @@ app.post('/create-payment', (req, res) => {
     s: signature,
     desc: `${uc} UC в Donza - ID: ${gameId}`,
     lang: 'ru',
-    i: '1'  // Можно заменить на 44 для СБП или 36 для карт
+    i: method.toString() // Можно заменить на 44 для СБП или 36 для карт
   });
 
   const paymentLink = `https://pay.freekassa.net/?${params.toString()}`;
