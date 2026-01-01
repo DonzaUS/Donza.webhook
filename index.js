@@ -2,7 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import crypto from "crypto";
 import cors from 'cors';
-import fetch from 'node-fetch'; // npm install node-fetch
+import fetch from 'node-fetch'; // Убедись, что установлено: npm install node-fetch
 
 const app = express();
 
@@ -32,12 +32,12 @@ app.post('/create-payment', async (req, res) => {
     paymentId: orderId,
     amount: Number(amount),
     currency: 'RUB',
-    i: Number(method),  // 44 - СБП (QR), 36 - карты
+    i: Number(method),  // 44 - СБП, 36 - карты
     email: 'donzaus@gmail.com',  // Твой email или клиента
     ip: req.ip || '127.0.0.1'
   };
 
-  // Подпись: сортируем ключи + join('|') + HMAC-SHA256
+  // Подпись API: сортировка ключей + join('|') + HMAC-SHA256
   const sortedKeys = Object.keys(payload).sort();
   const signString = sortedKeys.map(key => payload[key]).join('|');
   payload.signature = crypto.createHmac('sha256', API_KEY).update(signString).digest('hex');
