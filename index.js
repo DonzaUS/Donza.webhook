@@ -2,53 +2,67 @@ import express from "express";
 import bodyParser from "body-parser";
 import crypto from "crypto";
 import cors from 'cors';
+import fetch from 'node-fetch'; // npm install node-fetch
 
 const app = express();
 
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 
+const API_KEY = process.env.FREEKASSA_API_KEY;
 const SHOP_ID = process.env.SHOP_ID;
-const SECRET_WORD = process.env.SECRET_WORD;
 
-if (!SHOP_ID || !SECRET_WORD) {
-  console.error("Env не найдены");
+if (!API_KEY || !SHOP_ID) {
+  console.error("Env не найдены: API_KEY или SHOP_ID");
   process.exit(1);
 }
 
-app.post('/create-payment', (req, res) => {
-  const { amount, orderId, gameId, uc, method } = req.body; // ← добавил method
+app.post('/create-payment', async (req, res) => {
+  const { amount, orderId, gameId, uc, method } = req.body;
 
   if (!amount || !orderId || !gameId || !method) {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID/метода' });
   }
 
-  // Сумма всегда с .00
-  const amountStr = Number(amount).toFixed(2);
+  const nonce = Date.now().toString();
 
-  // Подпись MD5 (точно как в документации)
-  const signString = `${SHOP_ID}:${amountStr}:${SECRET_WORD}:RUB:${orderId}`;
-  const signature = crypto.createHash('md5').update(signString).digest('hex');
-
-  const params = new URLSearchParams({
-    m: SHOP_ID,
-    oa: amountStr,
-    o: orderId,
+  const payload = {
+    shopId: Number(SHOP_ID),
+    nonce,
+    paymentId: orderId,
+    amount: Number(amount),
     currency: 'RUB',
-    s: signature,
-    desc: `${uc} UC в Donza - ID: ${gameId}`,
-    lang: 'ru',
-    i: method.toString()  // ← теперь i = 44 или 36 — работает!
-  });
+    i: Number(method),  // 44 - СБП (QR), 36 - карты
+    email: 'donzaus@gmail.com',  // Твой email или клиента
+    ip: req.ip || '127.0.0.1'
+  };
 
-  const paymentLink = `https://pay.freekassa.net/?${params.toString()}`;
+  // Подпись: сортируем ключи + join('|') + HMAC-SHA256
+  const sortedKeys = Object.keys(payload).sort();
+  const signString = sortedKeys.map(key => payload[key]).join('|');
+  payload.signature = crypto.createHmac('sha256', API_KEY).update(signString).digest('hex');
 
-  console.log('Строка для подписи:', signString);
-  console.log('Подпись s:', signature);
-  console.log('Готовая ссылка:', paymentLink);
+  try {
+    const response = await fetch('https://api.fk.life/v1/orders/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-  res.json({ success: true, link: paymentLink });
+    const data = await response.json();
+
+    if (data.type === 'success' && data.location) {
+      console.log('Успех API, ссылка на оплату:', data.location);
+      return res.json({ success: true, link: data.location });
+    } else {
+      console.error('Ошибка API:', data);
+      return res.status(response.status || 500).json({ success: false, error: data.message || 'Ошибка FreeKassa' });
+    }
+  } catch (err) {
+    console.error('Ошибка fetch:', err);
+    return res.status(500).json({ success: false, error: 'Ошибка сервера' });
+  }
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
+app.listen(PORT, () => console.log(`Сервер запущен на ${PORT}`));
