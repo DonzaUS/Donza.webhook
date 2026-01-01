@@ -2,7 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import crypto from "crypto";
 import cors from "cors";
-import fetch from "node-fetch"; // npm install node-fetch
+import fetch from "node-fetch";
 
 const app = express();
 
@@ -13,33 +13,41 @@ const API_KEY = process.env.FREEKASSA_API_KEY;
 const SHOP_ID = process.env.SHOP_ID;
 
 if (!API_KEY || !SHOP_ID) {
-  console.error("Env не найдены: FREEKASSA_API_KEY или SHOP_ID");
+  console.error("Env не найдены");
   process.exit(1);
 }
 
 app.post("/create-payment", async (req, res) => {
-  const { amount, orderId, gameId, uc, method } = req.body;
+  const { amount, orderId, method } = req.body;
 
-  if (!amount || !orderId || !gameId || !method) {
-    return res.status(400).json({ success: false, error: "Нет суммы/ID/метода" });
+  if (!amount || !orderId || !method) {
+    return res.status(400).json({ success: false, error: "Нет данных" });
   }
 
   const nonce = Date.now().toString();
+  const paymentId = `${orderId}_${Date.now()}`;
+
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.socket.remoteAddress ||
+    "8.8.8.8";
 
   const payload = {
     shopId: Number(SHOP_ID),
     nonce,
-    paymentId: orderId,
+    paymentId,
     amount: Number(amount),
     currency: "RUB",
-    i: Number(method), // 44 — СБП, 36 — карты, 35 — QIWI
-    email: "donzaus@gmail.com", // Или email клиента
-    ip: req.ip || "127.0.0.1",
+    i: Number(method), // 44 — СБП
+    email: "donzaus@gmail.com",
+    ip,
   };
 
-  // Подпись API: сортировка ключей + join('|') + HMAC-SHA256
   const sortedKeys = Object.keys(payload).sort();
-  const signString = sortedKeys.map((key) => payload[key]).join("|");
+  const signString = sortedKeys
+    .map((key) => String(payload[key]))
+    .join("|");
+
   payload.signature = crypto
     .createHmac("sha256", API_KEY)
     .update(signString)
@@ -55,20 +63,14 @@ app.post("/create-payment", async (req, res) => {
     const data = await response.json();
 
     if (data.type === "success" && data.location) {
-      console.log("Успех API, ссылка на оплату:", data.location);
       return res.json({ success: true, link: data.location });
-    } else {
-      console.error("Ошибка API:", data);
-      return res.status(response.status || 500).json({
-        success: false,
-        error: data.message || "Ошибка FreeKassa",
-      });
     }
-  } catch (err) {
-    console.error("Ошибка fetch:", err);
-    return res.status(500).json({ success: false, error: "Ошибка сервера" });
+
+    return res.status(400).json({ success: false, error: data });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Сервер запущен на ${PORT}`));
+app.listen(PORT, () => console.log(`Server on ${PORT}`));
