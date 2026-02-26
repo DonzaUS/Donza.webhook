@@ -1,8 +1,8 @@
-import express from 'express';
-import bodyParser from 'body-parser';
-import crypto from 'crypto';
-import cors from 'cors';
-import fetch from 'node-fetch';
+const express = require('express');
+const bodyParser = require('body-parser');
+const crypto = require('crypto');
+const cors = require('cors');
+const fetch = require('node-fetch');
 
 const app = express();
 
@@ -14,7 +14,7 @@ const ENOT_SECRET = process.env.ENOT_SECRET;
 const ENOT_WEBHOOK_SECRET = process.env.ENOT_WEBHOOK_SECRET;
 
 if (!ENOT_MERCHANT_ID || !ENOT_SECRET || !ENOT_WEBHOOK_SECRET) {
-  console.error("Env не найдены");
+  console.error('Env не найдены');
   process.exit(1);
 }
 
