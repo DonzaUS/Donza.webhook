@@ -1,16 +1,16 @@
 {
   "name": "donzawebhook",
   "version": "1.0.0",
-  "description": "Webhook и API FreeKassa для Donza.site",
-  "main": "index.js",
+  "description": "Webhook и API Enot.io для Donza.site",
+  "main": "index.cjs",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js",
+    "start": "node index.cjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DonzaUS/DonzaWebhook.git"
+    "url": "git+https://github.com/DonzaUS/Donzawebhook.git"
   },
   "keywords": [
     "freekassa",
@@ -28,7 +28,7 @@
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^2.7.0"
   },
   "engines": {
     "node": ">=18.0.0"
