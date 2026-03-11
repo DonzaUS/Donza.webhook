@@ -1,8 +1,8 @@
-import express from 'express';
-import bodyParser from 'body-parser';
-import crypto from 'crypto';
-import cors from 'cors';
-import fetch from 'node-fetch';
+const express = require('express');
+const bodyParser = require('body-parser');
+const crypto = require('crypto');
+const cors = require('cors');
+const fetch = require('node-fetch');
 
 const app = express();
 
@@ -13,7 +13,7 @@ const API_KEY = process.env.FREEKASSA_API_KEY;
 const SHOP_ID = process.env.SHOP_ID;
 
 if (!API_KEY || !SHOP_ID) {
-  console.error('Env не найдены: FREEKASSA_API_KEY или SHOP_ID');
+  console.error('Env не найдены');
   process.exit(1);
 }
 
@@ -32,8 +32,8 @@ app.post('/create-payment', async (req, res) => {
     paymentId: orderId,
     amount: Number(amount),
     currency: 'RUB',
-    i: Number(method),  // 44 - СБП, 36 - карты
-    email: 'donzaus@gmail.com',  // или динамически от пользователя
+    i: Number(method),
+    email: 'donzaus@gmail.com',
     ip: req.ip || '127.0.0.1'
   };
 
@@ -51,14 +51,14 @@ app.post('/create-payment', async (req, res) => {
     const data = await response.json();
 
     if (data.type === 'success' && data.location) {
-      console.log('Успех FreeKassa, ссылка на оплату:', data.location);
+      console.log('Успех FreeKassa, ссылка:', data.location);
       return res.json({ success: true, link: data.location });
     } else {
       console.error('Ошибка FreeKassa:', data);
       return res.status(response.status || 500).json({ success: false, error: data.message || 'Ошибка FreeKassa' });
     }
   } catch (err) {
-    console.error('Ошибка fetch:', err);
+    console.error('Ошибка:', err);
     return res.status(500).json({ success: false, error: 'Ошибка сервера' });
   }
 });
@@ -71,7 +71,7 @@ app.post('/webhook', (req, res) => {
 
   if (SIGN === checkSign) {
     console.log('Оплата прошла! Заказ:', MERCHANT_ORDER_ID, 'Сумма:', AMOUNT);
-    // Здесь зачисляй UC по MERCHANT_ORDER_ID
+    // Зачисляй UC
   }
 
   res.send('OK');
