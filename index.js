@@ -56,10 +56,10 @@ async function updateCache() {
 // Первое обновление при старте сервера
 updateCache();
 
-// Устанавливаем интервал обновления каждые 4 часа
-const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
-setInterval(updateCache, FOUR_HOURS_MS);
-console.log(`[КЭШ] Автообновление каждые 4 часа запущено`);
+// Устанавливаем интервал обновления каждые 12 часов
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+setInterval(updateCache, TWELVE_HOURS_MS);
+console.log(`[КЭШ] Автообновление каждые 12 часов запущено`);
 
 // ========== 5. НОВЫЙ ЭНДПОИНТ ДЛЯ ПОЛУЧЕНИЯ КУРСА ==========
 app.get('/api/rate', (req, res) => {
@@ -67,7 +67,7 @@ app.get('/api/rate', (req, res) => {
     success: true,
     rate: cachedUsdRate,
     lastUpdate: lastUpdateDate,
-    message: 'Курс обновляется автоматически каждые 4 часа'
+    message: 'Курс обновляется автоматически каждые 12 часов' 
   });
 });
 
