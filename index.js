@@ -53,25 +53,22 @@ async function updateCache() {
 }
 
 // ========== 4. ЗАПУСКАЕМ ОБНОВЛЕНИЕ КУРСА ==========
-// Первое обновление при старте сервера
 updateCache();
-
-// Устанавливаем интервал обновления каждые 12 часов
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 setInterval(updateCache, TWELVE_HOURS_MS);
 console.log(`[КЭШ] Автообновление каждые 12 часов запущено`);
 
-// ========== 5. НОВЫЙ ЭНДПОИНТ ДЛЯ ПОЛУЧЕНИЯ КУРСА ==========
+// ========== 5. ЭНДПОИНТ ДЛЯ ПОЛУЧЕНИЯ КУРСА ==========
 app.get('/api/rate', (req, res) => {
   res.json({
     success: true,
     rate: cachedUsdRate,
     lastUpdate: lastUpdateDate,
-    message: 'Курс обновляется автоматически каждые 12 часов' 
+    message: 'Курс обновляется автоматически каждые 12 часов'
   });
 });
 
-// ========== 6. ОСНОВНОЙ ЭНДПОИНТ СОЗДАНИЯ ПЛАТЕЖА (ИЗМЕНЕН) ==========
+// ========== 6. СОЗДАНИЕ ПЛАТЕЖА ==========
 app.post('/create-payment', async (req, res) => {
   const { amount, orderId, gameId, uc, method } = req.body;
 
@@ -79,20 +76,17 @@ app.post('/create-payment', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Нет суммы/ID/метода' });
   }
 
-  // amount теперь должен приходить в ДОЛЛАРАХ (usdPrice)
-  // Конвертируем в рубли по текущему курсу из кэша
   const rubAmount = Math.round(amount * cachedUsdRate);
   
   console.log(`[КОНВЕРТАЦИЯ] ${amount}$ → ${rubAmount}₽ (курс: ${cachedUsdRate})`);
   console.log(`[ЗАПРОС] Заказ: ${orderId}, UC: ${uc}, метод: ${method}`);
 
   const nonce = Date.now().toString();
-
   const payload = {
     shopId: Number(SHOP_ID),
     nonce,
     paymentId: orderId,
-    amount: rubAmount,        // ← ОТПРАВЛЯЕМ РУБЛИ (конвертированные из долларов)
+    amount: rubAmount,
     currency: 'RUB',
     i: Number(method),
     email: 'donzaus@gmail.com',
@@ -125,16 +119,50 @@ app.post('/create-payment', async (req, res) => {
   }
 });
 
-// ========== 7. ВЕБХУК ДЛЯ ПОДТВЕРЖДЕНИЯ ОПЛАТ (НЕ ИЗМЕНЯЕТСЯ) ==========
-app.post('/webhook', (req, res) => {
+// ========== 7. ВЕБХУК ДЛЯ ПОДТВЕРЖДЕНИЯ ОПЛАТ С УВЕДОМЛЕНИЯМИ В TELEGRAM ==========
+app.post('/webhook', async (req, res) => {
   const { MERCHANT_ID, AMOUNT, MERCHANT_ORDER_ID, SIGN } = req.body;
 
   const secret2 = process.env.FREEKASSA_SECRET_2;
   const checkSign = crypto.createHash('md5').update(`${MERCHANT_ID}:${AMOUNT}:${secret2}:${MERCHANT_ORDER_ID}`).digest('hex');
 
   if (SIGN === checkSign) {
-    console.log('Оплата прошла! Заказ:', MERCHANT_ORDER_ID, 'Сумма:', AMOUNT);
-    // Здесь зачисляй UC
+    console.log('✅ ОПЛАТА ПОДТВЕРЖДЕНА! Заказ:', MERCHANT_ORDER_ID, 'Сумма:', AMOUNT);
+    
+    // ========== ЗАЧИСЛЕНИЕ UC (допиши свою логику) ==========
+    // Например, если в orderId хранится gameId: 
+    // const gameId = MERCHANT_ORDER_ID.split('-')[1];
+    // await addUCToPlayer(gameId, ucAmount);
+    // =====================================================
+
+    // ========== ОТПРАВКА УВЕДОМЛЕНИЯ В TELEGRAM ==========
+    const botToken = process.env.TG_BOT_TOKEN;
+    const chatId = process.env.TG_CHAT_ID;
+    
+    if (botToken && chatId) {
+      const message = `✅ НОВАЯ ОПЛАТА!\n\n🆔 Заказ: ${MERCHANT_ORDER_ID}\n💰 Сумма: ${AMOUNT} ₽\n📅 Время: ${new Date().toLocaleString()}`;
+      
+      try {
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+            parse_mode: 'HTML'
+          })
+        });
+        console.log('📨 Уведомление в Telegram отправлено');
+      } catch (tgError) {
+        console.error('❌ Ошибка отправки в Telegram:', tgError.message);
+      }
+    } else {
+      console.warn('⚠️ TG_BOT_TOKEN или TG_CHAT_ID не настроены');
+    }
+    // =====================================================
+
+  } else {
+    console.warn('❌ Неверная подпись webhook');
   }
 
   res.send('OK');
