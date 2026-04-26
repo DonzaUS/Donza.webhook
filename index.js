@@ -127,12 +127,22 @@ app.post('/webhook', async (req, res) => {
   const checkSign = crypto.createHash('md5').update(`${MERCHANT_ID}:${AMOUNT}:${secret2}:${MERCHANT_ORDER_ID}`).digest('hex');
 
   if (SIGN === checkSign) {
-    console.log('✅ ОПЛАТА ПОДТВЕРЖДЕНА! Заказ:', MERCHANT_ORDER_ID, 'Сумма:', AMOUNT);
+    // ========== РАЗБИРАЕМ НОМЕР ЗАКАЗА ==========
+    // Формат заказа: "order-UC-ИГРОК"
+    // Например: "order-325-MyPlayer123"
+    const orderParts = MERCHANT_ORDER_ID.split('-');
+    const ucAmount = orderParts[1];                    // количество UC (например, "325")
+    const gameIdFromOrder = orderParts.slice(2).join('-'); // игровой ID (например, "MyPlayer123")
+    
+    console.log('✅ ОПЛАТА ПОДТВЕРЖДЕНА!');
+    console.log(`🎮 Игрок: ${gameIdFromOrder}`);
+    console.log(`💎 UC: ${ucAmount}`);
+    console.log(`💰 Сумма: ${AMOUNT} ₽`);
+    console.log(`🆔 Заказ: ${MERCHANT_ORDER_ID}`);
     
     // ========== ЗАЧИСЛЕНИЕ UC (допиши свою логику) ==========
-    // Например, если в orderId хранится gameId: 
-    // const gameId = MERCHANT_ORDER_ID.split('-')[1];
-    // await addUCToPlayer(gameId, ucAmount);
+    // Здесь ты будешь зачислять UC игроку gameIdFromOrder
+    // Например: await addUCToPlayer(gameIdFromOrder, parseInt(ucAmount));
     // =====================================================
 
     // ========== ОТПРАВКА УВЕДОМЛЕНИЯ В TELEGRAM ==========
@@ -140,7 +150,7 @@ app.post('/webhook', async (req, res) => {
     const chatId = process.env.TG_CHAT_ID;
     
     if (botToken && chatId) {
-      const message = `✅ НОВАЯ ОПЛАТА!\n\n🆔 Заказ: ${MERCHANT_ORDER_ID}\n💰 Сумма: ${AMOUNT} ₽\n📅 Время: ${new Date().toLocaleString()}`;
+      const message = `✅ НОВАЯ ОПЛАТА!\n\n🎮 Игрок: ${gameIdFromOrder}\n💎 UC: ${ucAmount}\n💰 Сумма: ${AMOUNT} ₽\n🆔 Заказ: ${MERCHANT_ORDER_ID}\n📅 Время: ${new Date().toLocaleString()}`;
       
       try {
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
