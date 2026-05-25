@@ -178,7 +178,151 @@ app.post('/webhook', async (req, res) => {
   res.send('OK');
 });
 
-// ========== 8. ЗАПУСК СЕРВЕРА ==========
+// ========== 8. СТРАНИЦЫ УСПЕХА И ОШИБКИ ==========
+app.get('/success', (req, res) => {
+  const { order_id, amount, merchant_order_id } = req.query;
+  
+  const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оплата успешна - Donza</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: url('https://donza.ru/photo_1.jpg') center/cover no-repeat fixed;
+            font-family: system-ui, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .success-card {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .check-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .check-icon span { font-size: 45px; color: white; font-weight: bold; }
+        h1 { color: white; font-size: 28px; margin-bottom: 12px; }
+        .message { color: rgba(255,255,255,0.85); margin-bottom: 25px; }
+        .order-details {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 25px;
+            color: #ddd;
+        }
+        .order-details span { color: #efd55e; }
+        .button {
+            display: inline-block;
+            background: #efd55e90;
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-weight: 600;
+        }
+        .button:hover { background: #efd55e; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="success-card">
+        <div class="check-icon"><span>✓</span></div>
+        <h1>Оплата прошла успешно!</h1>
+        <div class="message">Спасибо за покупку! Ваш заказ обрабатывается.<br>UC будут зачислены в ближайшее время.</div>
+        <div class="order-details">Номер заказа: ${order_id || merchant_order_id || 'Загрузка...'}</div>
+        <a href="https://donza.ru/shop" class="button">Вернуться в магазин</a>
+    </div>
+</body>
+</html>`;
+  
+  res.send(html);
+});
+
+app.get('/failure', (req, res) => {
+  const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ошибка оплаты - Donza</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: url('https://donza.ru/photo_1.jpg') center/cover no-repeat fixed;
+            font-family: system-ui, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .fail-card {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .fail-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .fail-icon span { font-size: 45px; color: white; font-weight: bold; }
+        h1 { color: white; font-size: 28px; margin-bottom: 12px; }
+        .message { color: rgba(255,255,255,0.85); margin-bottom: 25px; }
+        .button {
+            display: inline-block;
+            background: #f4433690;
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-weight: 600;
+        }
+        .button:hover { background: #f44336; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="fail-card">
+        <div class="fail-icon"><span>✕</span></div>
+        <h1>Ошибка оплаты</h1>
+        <div class="message">К сожалению, произошла ошибка при обработке платежа.<br>Пожалуйста, попробуйте ещё раз.</div>
+        <a href="https://donza.ru/shop" class="button">Вернуться в магазин</a>
+    </div>
+</body>
+</html>`;
+  
+  res.send(html);
+});
+
+// ========== 9. ЗАПУСК СЕРВЕРА ==========
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`[СЕРВЕР] Запущен на порту ${PORT}`);
