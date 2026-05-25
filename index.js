@@ -18,7 +18,7 @@ if (!API_KEY || !SHOP_ID) {
 }
 
 // ========== 1. СЕРВЕРНЫЙ КЭШ КУРСА ВАЛЮТ ==========
-let cachedUsdRate = 90;        // Начальный курс (запасной)
+let cachedUsdRate = 90;
 let lastUpdateTime = null;
 let lastUpdateDate = null;
 
@@ -127,12 +127,10 @@ app.post('/webhook', async (req, res) => {
   const checkSign = crypto.createHash('md5').update(`${MERCHANT_ID}:${AMOUNT}:${secret2}:${MERCHANT_ORDER_ID}`).digest('hex');
 
   if (SIGN === checkSign) {
-    // ========== РАЗБИРАЕМ НОМЕР ЗАКАЗА ==========
-    // Формат заказа: "order-UC-ИГРОК"
-    // Например: "order-325-MyPlayer123"
+    // Разбираем номер заказа
     const orderParts = MERCHANT_ORDER_ID.split('-');
-    const ucAmount = orderParts[1];                    // количество UC (например, "325")
-    const gameIdFromOrder = orderParts.slice(2).join('-'); // игровой ID (например, "MyPlayer123")
+    const ucAmount = orderParts[1];
+    const gameIdFromOrder = orderParts.slice(2).join('-');
     
     console.log('✅ ОПЛАТА ПОДТВЕРЖДЕНА!');
     console.log(`🎮 Игрок: ${gameIdFromOrder}`);
@@ -140,12 +138,7 @@ app.post('/webhook', async (req, res) => {
     console.log(`💰 Сумма: ${AMOUNT} ₽`);
     console.log(`🆔 Заказ: ${MERCHANT_ORDER_ID}`);
     
-    // ========== ЗАЧИСЛЕНИЕ UC (допиши свою логику) ==========
-    // Здесь ты будешь зачислять UC игроку gameIdFromOrder
-    // Например: await addUCToPlayer(gameIdFromOrder, parseInt(ucAmount));
-    // =====================================================
-
-    // ========== ОТПРАВКА УВЕДОМЛЕНИЯ В TELEGRAM ==========
+    // Отправка в Telegram
     const botToken = process.env.TG_BOT_TOKEN;
     const chatId = process.env.TG_CHAT_ID;
     
@@ -169,13 +162,14 @@ app.post('/webhook', async (req, res) => {
     } else {
       console.warn('⚠️ TG_BOT_TOKEN или TG_CHAT_ID не настроены');
     }
-    // =====================================================
 
+    // ВАЖНО: FreeKassa ждёт ответ "YES"
+    res.send('YES');
   } else {
     console.warn('❌ Неверная подпись webhook');
+    // Тоже отвечаем YES, чтобы FreeKassa не спамил
+    res.send('YES');
   }
-
-  res.send('OK');
 });
 
 // ========== 8. СТРАНИЦА УСПЕХА ==========
