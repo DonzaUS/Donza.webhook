@@ -178,7 +178,7 @@ app.post('/webhook', async (req, res) => {
   res.send('OK');
 });
 
-// ========== 8. СТРАНИЦЫ УСПЕХА И ОШИБКИ ==========
+// ========== 8. СТРАНИЦА УСПЕХА ==========
 app.get('/success', (req, res) => {
   const { order_id, amount, merchant_order_id } = req.query;
   
@@ -192,7 +192,7 @@ app.get('/success', (req, res) => {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             min-height: 100vh;
-            background: url('https://donza.ru/photo_1.jpg') center/cover no-repeat fixed;
+            background: url('https://donza.site/photo_1.jpg') center/cover no-repeat fixed;
             font-family: system-ui, sans-serif;
             display: flex;
             align-items: center;
@@ -200,7 +200,7 @@ app.get('/success', (req, res) => {
             padding: 20px;
         }
         .success-card {
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(10px);
             border-radius: 24px;
             padding: 40px 30px;
@@ -221,7 +221,7 @@ app.get('/success', (req, res) => {
         }
         .check-icon span { font-size: 45px; color: white; font-weight: bold; }
         h1 { color: white; font-size: 28px; margin-bottom: 12px; }
-        .message { color: rgba(255,255,255,0.85); margin-bottom: 25px; }
+        .message { color: rgba(255,255,255,0.85); margin-bottom: 25px; line-height: 1.5; }
         .order-details {
             background: rgba(255,255,255,0.1);
             border-radius: 12px;
@@ -238,6 +238,7 @@ app.get('/success', (req, res) => {
             padding: 12px 30px;
             border-radius: 40px;
             font-weight: 600;
+            transition: all 0.2s;
         }
         .button:hover { background: #efd55e; transform: translateY(-2px); }
     </style>
@@ -248,7 +249,7 @@ app.get('/success', (req, res) => {
         <h1>Оплата прошла успешно!</h1>
         <div class="message">Спасибо за покупку! Ваш заказ обрабатывается.<br>UC будут зачислены в ближайшее время.</div>
         <div class="order-details">Номер заказа: ${order_id || merchant_order_id || 'Загрузка...'}</div>
-        <a href="https://donza.ru/shop" class="button">Вернуться в магазин</a>
+        <a href="https://donza.site/shop" class="button">Вернуться в магазин</a>
     </div>
 </body>
 </html>`;
@@ -256,6 +257,7 @@ app.get('/success', (req, res) => {
   res.send(html);
 });
 
+// ========== 9. СТРАНИЦА ОШИБКИ ==========
 app.get('/failure', (req, res) => {
   const html = `<!DOCTYPE html>
 <html lang="ru">
@@ -267,7 +269,7 @@ app.get('/failure', (req, res) => {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             min-height: 100vh;
-            background: url('https://donza.ru/photo_1.jpg') center/cover no-repeat fixed;
+            background: url('https://donza.site/photo_1.jpg') center/cover no-repeat fixed;
             font-family: system-ui, sans-serif;
             display: flex;
             align-items: center;
@@ -275,7 +277,7 @@ app.get('/failure', (req, res) => {
             padding: 20px;
         }
         .fail-card {
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(10px);
             border-radius: 24px;
             padding: 40px 30px;
@@ -296,7 +298,7 @@ app.get('/failure', (req, res) => {
         }
         .fail-icon span { font-size: 45px; color: white; font-weight: bold; }
         h1 { color: white; font-size: 28px; margin-bottom: 12px; }
-        .message { color: rgba(255,255,255,0.85); margin-bottom: 25px; }
+        .message { color: rgba(255,255,255,0.85); margin-bottom: 25px; line-height: 1.5; }
         .button {
             display: inline-block;
             background: #f4433690;
@@ -305,6 +307,7 @@ app.get('/failure', (req, res) => {
             padding: 12px 30px;
             border-radius: 40px;
             font-weight: 600;
+            transition: all 0.2s;
         }
         .button:hover { background: #f44336; transform: translateY(-2px); }
     </style>
@@ -314,7 +317,7 @@ app.get('/failure', (req, res) => {
         <div class="fail-icon"><span>✕</span></div>
         <h1>Ошибка оплаты</h1>
         <div class="message">К сожалению, произошла ошибка при обработке платежа.<br>Пожалуйста, попробуйте ещё раз.</div>
-        <a href="https://donza.ru/shop" class="button">Вернуться в магазин</a>
+        <a href="https://donza.site/shop" class="button">Вернуться в магазин</a>
     </div>
 </body>
 </html>`;
@@ -322,7 +325,7 @@ app.get('/failure', (req, res) => {
   res.send(html);
 });
 
-// ========== 9. ЗАПУСК СЕРВЕРА ==========
+// ========== 10. ЗАПУСК СЕРВЕРА ==========
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`[СЕРВЕР] Запущен на порту ${PORT}`);
