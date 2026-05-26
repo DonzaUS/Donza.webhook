@@ -119,12 +119,42 @@ app.post('/create-payment', async (req, res) => {
   }
 });
 
-// ========== 7. ВЕБХУК ДЛЯ ПОДТВЕРЖДЕНИЯ ОПЛАТ С УВЕДОМЛЕНИЯМИ В TELEGRAM ==========
+// ========== 7. ВЕБХУК С ПРОВЕРКОЙ IP И ПОДРОБНЫМ ЛОГИРОВАНИЕМ ==========
 app.post('/webhook', async (req, res) => {
+  // Белый список IP FreeKassa (проверь актуальность по документации)
+  const allowedIPs = [
+    '168.119.157.136',
+    '168.119.60.227',
+    '178.154.197.79',
+    '51.250.54.238'
+  ];
+  const clientIp = req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress;
+  
+  // Проверка IP
+  if (!allowedIPs.includes(clientIp)) {
+    console.warn(`❌ Запрос отклонён: IP ${clientIp} не в белом списке FreeKassa`);
+    return res.status(403).send('Forbidden');
+  }
+  console.log(`✅ IP ${clientIp} в белом списке`);
+
   const { MERCHANT_ID, AMOUNT, MERCHANT_ORDER_ID, SIGN } = req.body;
+
+  // Если нет подписи — это тестовый запрос FreeKassa (проверка статуса)
+  if (!SIGN) {
+    console.log('🔍 Тестовый запрос от FreeKassa (проверка статуса) — подпись не проверяем');
+    return res.send('YES');
+  }
 
   const secret2 = process.env.FREEKASSA_SECRET_2;
   const checkSign = crypto.createHash('md5').update(`${MERCHANT_ID}:${AMOUNT}:${secret2}:${MERCHANT_ORDER_ID}`).digest('hex');
+
+  // Расширенное логирование для отладки
+  console.log('📥 Входные данные от FreeKassa:', JSON.stringify(req.body, null, 2));
+  console.log('🔑 secret2 из env:', secret2);
+  console.log('📦 Строка для подписи (порядок: MERCHANT_ID:AMOUNT:secret2:MERCHANT_ORDER_ID)');
+  console.log(`👉 ${MERCHANT_ID}:${AMOUNT}:${secret2}:${MERCHANT_ORDER_ID}`);
+  console.log('🧮 Вычисленный checkSign:', checkSign);
+  console.log('🔐 SIGN от FreeKassa:', SIGN);
 
   if (SIGN === checkSign) {
     // Разбираем номер заказа
@@ -163,11 +193,9 @@ app.post('/webhook', async (req, res) => {
       console.warn('⚠️ TG_BOT_TOKEN или TG_CHAT_ID не настроены');
     }
 
-    // ВАЖНО: FreeKassa ждёт ответ "YES"
     res.send('YES');
   } else {
-    console.warn('❌ Неверная подпись webhook');
-    // Тоже отвечаем YES, чтобы FreeKassa не спамил
+    console.warn('❌ Неверная подпись webhook (реальный запрос, но подпись не совпала)');
     res.send('YES');
   }
 });
