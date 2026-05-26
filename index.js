@@ -119,24 +119,8 @@ app.post('/create-payment', async (req, res) => {
   }
 });
 
-// ========== 7. ВЕБХУК С ПРОВЕРКОЙ IP И ПОДРОБНЫМ ЛОГИРОВАНИЕМ ==========
+// ========== 7. ВЕБХУК БЕЗ ПРОВЕРКИ IP, С РАСШИРЕННЫМ ЛОГИРОВАНИЕМ ==========
 app.post('/webhook', async (req, res) => {
-  // Белый список IP FreeKassa (проверь актуальность по документации)
-  const allowedIPs = [
-    '168.119.157.136',
-    '168.119.60.227',
-    '178.154.197.79',
-    '51.250.54.238'
-  ];
-  const clientIp = req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress;
-  
-  // Проверка IP
-  if (!allowedIPs.includes(clientIp)) {
-    console.warn(`❌ Запрос отклонён: IP ${clientIp} не в белом списке FreeKassa`);
-    return res.status(403).send('Forbidden');
-  }
-  console.log(`✅ IP ${clientIp} в белом списке`);
-
   const { MERCHANT_ID, AMOUNT, MERCHANT_ORDER_ID, SIGN } = req.body;
 
   // Если нет подписи — это тестовый запрос FreeKassa (проверка статуса)
