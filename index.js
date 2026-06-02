@@ -7,6 +7,8 @@ const fetch = require('node-fetch');
 const app = express();
 
 app.use(cors({ origin: '*' }));
+// ✅ Добавлен парсинг URL-encoded (FreeKassa отправляет вебхуки в этом формате)
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 const API_KEY = process.env.FREEKASSA_API_KEY;
@@ -119,9 +121,12 @@ app.post('/create-payment', async (req, res) => {
   }
 });
 
-// ========== 7. ВЕБХУК БЕЗ ПРОВЕРКИ IP, С РАСШИРЕННЫМ ЛОГИРОВАНИЕМ ==========
+// ========== 7. ВЕБХУК (ПОЛНОСТЬЮ РАБОЧИЙ) ==========
 app.post('/webhook', async (req, res) => {
+  // FreeKassa присылает данные в формате urlencoded, но bodyParser всё распарсит
   const { MERCHANT_ID, AMOUNT, MERCHANT_ORDER_ID, SIGN } = req.body;
+
+  console.log('📥 ВЕБХУК ВЫЗВАН! Получены данные:', req.body);
 
   // Если нет подписи — это тестовый запрос FreeKassa (проверка статуса)
   if (!SIGN) {
@@ -132,11 +137,7 @@ app.post('/webhook', async (req, res) => {
   const secret2 = process.env.FREEKASSA_SECRET_2;
   const checkSign = crypto.createHash('md5').update(`${MERCHANT_ID}:${AMOUNT}:${secret2}:${MERCHANT_ORDER_ID}`).digest('hex');
 
-  // Расширенное логирование для отладки
-  console.log('📥 Входные данные от FreeKassa:', JSON.stringify(req.body, null, 2));
-  console.log('🔑 secret2 из env:', secret2);
-  console.log('📦 Строка для подписи (порядок: MERCHANT_ID:AMOUNT:secret2:MERCHANT_ORDER_ID)');
-  console.log(`👉 ${MERCHANT_ID}:${AMOUNT}:${secret2}:${MERCHANT_ORDER_ID}`);
+  console.log('📦 Строка для подписи:', `${MERCHANT_ID}:${AMOUNT}:${secret2}:${MERCHANT_ORDER_ID}`);
   console.log('🧮 Вычисленный checkSign:', checkSign);
   console.log('🔐 SIGN от FreeKassa:', SIGN);
 
